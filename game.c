@@ -6,6 +6,8 @@
 
 #define LEFT 1
 #define RIGHT 2
+#define SPEED_INCREASING_RATE 20000
+#define DEFAULT_SPEED 100000
 
 int draw(int direction);
 WINDOW* start_menu();
@@ -14,17 +16,17 @@ void game_description();
 void game_settings();
 
 
-pthread_t enemy_thread_id;
+pthread_t ball_thread_id;
 pthread_t game_start_thread_id;
 
 //aici avem threadul pt bila 
-void *enemy_thread(void *vargp){
+void *ball_thread(void *vargp){
 
     int parent_x, parent_y;
     int pos_x, pos_y;
     int pos_player_x;
     int scor = 0;
-    int speed = 100000;
+    int speed = DEFAULT_SPEED;
     int speed_count = 1;
     int lives = 1;
 
@@ -36,7 +38,7 @@ void *enemy_thread(void *vargp){
 
     while( 1 ){
         usleep(speed);
-        clear();
+        erase(); //fixed flickering bug - used instead of clear()
         box(stdscr, 0, 0);
 
         pos_player_x = draw(0);
@@ -48,10 +50,15 @@ void *enemy_thread(void *vargp){
             scor++;
 
             if((scor % 5) == 0 && scor != 0){
-
+				flash();
                 speed_count++;
-                speed = speed / speed_count;
+                speed = speed - SPEED_INCREASING_RATE;
             }
+			/* Ball is catched -> generate new ball
+			*/
+			pos_x = rand() % parent_x;
+            pos_y = 0;
+
         }
 
         if((pos_x < pos_player_x || pos_x > (pos_player_x + 12)) && pos_y == (parent_y - 1)){
@@ -121,29 +128,28 @@ int draw(int direction){
 void *game_start_thread(void *vargp){
 
     draw(0);
+	char key;
 
-    int game_status = 1;
-
-    while ( game_status != 0 ) {
-        int key = getch();
+    while ( 1 ) {
+        key = getch();
 
         switch ( key ) {
 
-        case KEY_LEFT:
+        case 'KEY_LEFT':
         case 'a':
             draw(LEFT);
             break;
 
-        case KEY_RIGHT:
+        case 'KEY_RIGHT':
         case 'd':
             draw(RIGHT);
             break;
 
         case 'q':
+            endwin();
             start_menu();
-            game_status = 0;
-            pthread_cancel(enemy_thread_id);
-            break;
+            pthread_cancel(ball_thread_id);
+            return;
         }
     }
 }
@@ -177,39 +183,36 @@ WINDOW* start_menu(){
 
 void start(){
 
-    int select = -1;
+    char select;
 
     WINDOW *field = start_menu();
-   
-    while(select != 0){
-        scanf("%d", &select);
+
+    while( 1 ){
+		select = getch();
         switch(select){
-            case 0:
+            case '0':
                 wprintw(field, "Exit - See you later! \n");
                 wrefresh(field);
-                break;
+				delwin(field);
+				endwin();
+                return;
 
-            case 1:
-                pthread_create(&enemy_thread_id, NULL, enemy_thread, 0);
+            case '1':
+                pthread_create(&ball_thread_id, NULL, ball_thread, 0);
                 pthread_create(&game_start_thread_id, NULL, game_start_thread, 0);
 
-                pthread_join(enemy_thread_id, NULL);
+                pthread_join(ball_thread_id, NULL);
                 pthread_join(game_start_thread_id, NULL);
                 break;
 
-            case 2:
+            case '2':
                 game_description();
                 start_menu();
                 break;
 
-            case 3:
+            case '3':
                 game_settings();
                 start_menu();
-                break;
-
-            default:
-                wprintw(field, "Default \n");
-                wrefresh(field);
                 break;
         }
     }
@@ -220,13 +223,13 @@ void start(){
 void game_description(){
 
     int parent_x, parent_y, new_x, new_y;
-    int select = -1;
+    char select;
 
     initscr();
     noecho();
 
     getmaxyx(stdscr, parent_y, parent_x);
-   
+
     WINDOW *description_win = newwin(parent_y, parent_x, 0, 0);
     wprintw(description_win, "Description\n\n");
     wprintw(description_win, "...\n");
@@ -235,11 +238,13 @@ void game_description(){
 
     wrefresh(description_win);
 
-    while(select != 0){
-        scanf("%d", &select);
+    while( 1 ){
+		select = getch();
         switch(select){
-            case 0:
-                break;
+            case '0':
+				delwin(description_win);
+				endwin();
+                return;
         }
     }
     wrefresh(description_win);
@@ -252,7 +257,7 @@ void game_description(){
 void game_settings(){
 
     int parent_x, parent_y, new_x, new_y;
-    int select = -1;
+    char select;
 
     initscr();
     noecho();
@@ -270,34 +275,30 @@ void game_settings(){
 
     wrefresh(settings_win);
 
-    while(select != 0){
-        scanf("%d", &select);
+    while( 1 ){
+		select = getch();
         switch(select){
 
-            case 0:
+            case '0':
                 wrefresh(settings_win);
-                break;
+    			delwin(settings_win);
+				endwin();
+                return;
 
-            case 1:
+            case '1':
                 wprintw(settings_win, "Setup 1 chosen!\n");
                 wrefresh(settings_win);
                 break;
 
-            case 2:
+            case '2':
                 wprintw(settings_win, "Setup 2 chosen!\n");
                 wrefresh(settings_win);
                 break;
 
-            case 3:
+            case '3':
                 wprintw(settings_win, "Setup 3 chosen!\n");
                 wrefresh(settings_win);
                 break;
-
-            default:
-                wprintw(settings_win, "Default! \n");
-                wrefresh(settings_win);
-                break;
-
             }
         }
 
@@ -313,6 +314,3 @@ int main(int argc, char* argv[]){
 
     return 0;
 }
-
- 
-         

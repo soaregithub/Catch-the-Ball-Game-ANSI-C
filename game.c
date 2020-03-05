@@ -131,16 +131,14 @@ void *game_start_thread(void *vargp){
 	char key;
 
     while ( 1 ) {
-        key = getch();
+        key = getchar();
 
         switch ( key ) {
 
-        case 'KEY_LEFT':
         case 'a':
             draw(LEFT);
             break;
 
-        case 'KEY_RIGHT':
         case 'd':
             draw(RIGHT);
             break;
@@ -188,7 +186,7 @@ void start(){
     WINDOW *field = start_menu();
 
     while( 1 ){
-		select = getch();
+		select = getchar();
         switch(select){
             case '0':
                 wprintw(field, "Exit - See you later! \n");
@@ -239,7 +237,7 @@ void game_description(){
     wrefresh(description_win);
 
     while( 1 ){
-		select = getch();
+		select = getchar();
         switch(select){
             case '0':
 				delwin(description_win);
@@ -276,7 +274,7 @@ void game_settings(){
     wrefresh(settings_win);
 
     while( 1 ){
-		select = getch();
+		select = getchar();
         switch(select){
 
             case '0':
